@@ -15,8 +15,10 @@ import (
 //-----------------------------------------------------------------------------
 // Defaults
 
-const bucketSize = 3
-const defaultBitWidth = 8
+const (
+	bucketSize      = 3
+	defaultBitWidth = 8
+)
 
 //-----------------------------------------------------------------------------
 // Boolean constants
@@ -849,6 +851,33 @@ func (p *Pointer) isShard() bool {
 func (n *Node) ForEach(ctx context.Context, f func(k string, val *cbg.Deferred) error) error {
 	for _, p := range n.Pointers {
 		if p.isShard() {
+			chnd, err := p.loadChild(ctx, n.store, n.bitWidth, n.hash)
+			if err != nil {
+				return err
+			}
+
+			if err := chnd.ForEach(ctx, f); err != nil {
+				return err
+			}
+		} else {
+			for _, kv := range p.KVs {
+				if err := f(string(kv.Key), kv.Value); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// ForEachMatching traverses the HAMT descending into child nodes when m(link) returns true and calls function f on each
+// key / val pair found the resulting buckets. The values are returned as raw bytes, not decoded.
+func (n *Node) ForEachMatching(ctx context.Context, m func(c cid.Cid) bool, f func(k string, val *cbg.Deferred) error) error {
+	for _, p := range n.Pointers {
+		if p.isShard() {
+			if !m(p.Link) {
+				return nil
+			}
 			chnd, err := p.loadChild(ctx, n.store, n.bitWidth, n.hash)
 			if err != nil {
 				return err
