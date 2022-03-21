@@ -16,3 +16,6 @@ require (
 )
 
 go 1.16
+
+// https://github.com/whyrusleeping/cbor-gen/pull/65
+replace github.com/whyrusleeping/cbor-gen => github.com/iand/cbor-gen v0.0.0-20220318112723-f71164a2e9d5
